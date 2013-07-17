@@ -45,6 +45,11 @@ void copy_dics(struct dic *d_old, struct dic *d_new);
 static long string_hash(struct py_obj *key);
 //////////////////
 
+//	GETTING		//
+struct py_obj *get(struct dic *d, struct py_obj *key);
+struct py_obj *get_keys(struct dic *d);
+//////////////////
+
 //	PRINTING	//
 void print_array(char a[], int len);
 void print_dic(struct dic *d);
@@ -58,11 +63,15 @@ main()
 	insert_raw(d, "b", 1, "b", 1);
 	insert_raw(d, "c", 1, "c", 1);
 	insert_raw(d, "d", 1, "d", 1);
-	insert_raw(d, "e", 1, "e", 1);
+	insert_raw(d, "e", 1, "this shit works", 15);
 	insert_raw(d, "f", 1, "f", 1);
 	insert_raw(d, "g", 1, "g", 1);
 	insert_raw(d, "z", 1, "z", 1);
-	print_dic(d);
+	struct py_obj *key = new_py_obj("e",1);
+	struct py_obj *value = get(d, key);
+	char *str = value->str;
+	print_array(str, 15);
+	//print_dic(d);
 	return 0;
 }
 
@@ -226,7 +235,31 @@ static long string_hash(struct py_obj *key) {
 //////////////////////////////////////////////////////
 
 
+/////////////////////  GETTERS ///////////////////////
+//////////////////////////////////////////////////////
 
+struct py_obj *get(struct dic *d, struct py_obj *key) {
+	long i;
+	for (i = 0; i < d->total_slots; i++) {
+		if (d->table[i].key != NULL && key->str == d->table[i].key->str) {
+			return d->table[i].value;
+		}
+	}
+	return NULL;
+}
+
+struct py_obj *get_keys(struct dic *d) {
+	long dic_index, key_index;
+	struct py_obj *key_table = malloc(d->used_slots*sizeof(struct py_obj));
+	key_index = 0;
+	for (dic_index = 0; dic_index < d->total_slots; dic_index++) {
+		if (d->table[dic_index].key != NULL) {
+			key_table[key_index] = *(d->table[dic_index].key);
+			key_index++;
+		}
+	}
+	return key_table;
+}
 
 
 ///////////////////// PRINTERS ///////////////////////
@@ -237,6 +270,7 @@ void print_array(char a[], int len) {
 	for (i = 0; i < len; i++) {
 		printf("%c", a[i]);
 	}
+	printf("\n");
 }
 
 void print_dic(struct dic *d) {
