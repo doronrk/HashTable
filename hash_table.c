@@ -1,6 +1,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 
+// Questions
+// What does the 'static' in 'static long' do?
+// What is the best way to implement caching?
+// What is the best way to test this code? How can I populate the table with a ton of strings?
+// How can I time code?
+// Is there a way to run C code from python?
+
 struct dic
 {
 	long total_slots;
