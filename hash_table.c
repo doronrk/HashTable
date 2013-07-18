@@ -8,6 +8,9 @@
 // How can I time code?
 // Is there a way to run C code from python?
 
+// Changes
+// make it so that pointer from dic_table are NULL, instead of pointing to dummy entries that point to NULL in key/value
+
 struct dic
 {
 	long total_slots;
@@ -54,6 +57,7 @@ static long string_hash(struct py_obj *key);
 
 //	GETTING		//
 struct py_obj *get(struct dic *d, struct py_obj *key);
+struct py_obj *get_helper(struct dic *d, struct py_obj *key, long index, long col_count);
 struct py_obj *get_keys(struct dic *d);
 //////////////////
 
@@ -73,12 +77,22 @@ main()
 	insert_raw(d, "e", 1, "this shit works", 15);
 	insert_raw(d, "f", 1, "f", 1);
 	insert_raw(d, "g", 1, "g", 1);
-	insert_raw(d, "z", 1, "z", 1);
-	struct py_obj *key = new_py_obj("e",1);
+	insert_raw(d, "zebra", 5, "monsterman!", 11);
+	print_dic(d);
+	struct py_obj *key = new_py_obj("zebra",5);
 	struct py_obj *value = get(d, key);
-	char *str = value->str;
-	print_array(str, 15);
-	//print_dic(d);
+	if (value->str == "monsterman!") {
+		printf("get() test passed\n");
+	}
+	else {
+		printf("get() test failed\n");
+	}
+	struct py_obj *key_array = get_keys(d);
+	long i;
+	for (i = 0; i < d->used_slots; i++) {
+		print_array(key_array[i].str, key_array[i].len);
+		printf("\n");
+	}
 	return 0;
 }
 
@@ -143,7 +157,7 @@ void insert_raw(struct dic *d, char *k, int k_length, char *v, int v_length)
 // inserts dic_entry into table of dic
 void insert_entry(struct dic *d, struct dic_entry *entry_to_insert) {
 	//printf("insert_entry called\n");
-	long index = string_hash(entry_to_insert->key)&d->mask;
+	long index = string_hash(entry_to_insert->key) & d->mask;
 	insert_at_index(d, entry_to_insert, index, 0);
 	handle_resize(d);
 }
@@ -166,13 +180,7 @@ void insert_at_index(struct dic *d, struct dic_entry *entry_to_insert, long inde
 }
 
 void handle_collision(struct dic *d, struct dic_entry *entry_to_insert, long index, long col_count) {
-	//printf("handle_collision called\n");
-	int incr, new_index;
-	incr = col_count*col_count;
-	//incr = 1;
-	new_index = (index + incr);
-	//index += incr;  ???
-	insert_at_index(d, entry_to_insert, new_index, col_count);
+	insert_at_index(d, entry_to_insert, index + (col_count * col_count), col_count);
 }
 
 // determines whether used slots exceeds 2/3 of total slots
@@ -246,14 +254,22 @@ static long string_hash(struct py_obj *key) {
 //////////////////////////////////////////////////////
 
 struct py_obj *get(struct dic *d, struct py_obj *key) {
-	long i;
-	for (i = 0; i < d->total_slots; i++) {
-		if (d->table[i].key != NULL && key->str == d->table[i].key->str) {
-			return d->table[i].value;
-		}
-	}
-	return NULL;
+	long index = string_hash(key) & d->mask;
+	return get_helper(d, key, index, 0);
 }
+
+struct py_obj *get_helper(struct dic *d, struct py_obj *key, long index, long col_count) {
+	if (d->table[index].key == NULL) {
+		return NULL;
+	}
+	else if (d->table[index].key->str == key->str) {
+		return d->table[index].value;
+	}
+	else {
+		return get_helper(d, key, index + (col_count * col_count), col_count + 1);
+	}
+}
+
 
 struct py_obj *get_keys(struct dic *d) {
 	long dic_index, key_index;
@@ -277,7 +293,6 @@ void print_array(char a[], int len) {
 	for (i = 0; i < len; i++) {
 		printf("%c", a[i]);
 	}
-	printf("\n");
 }
 
 void print_dic(struct dic *d) {
@@ -287,7 +302,7 @@ void print_dic(struct dic *d) {
 	{
 		struct dic_entry de = d->table[i];
 		if (de.key == NULL) {
-			printf("empty index at %d\n",i);
+			printf("empty slot at %d\n",i);
 		}
 		else {
 			printf("{");
