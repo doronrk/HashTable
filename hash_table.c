@@ -68,7 +68,6 @@ void print_dic(struct dic *d);
 
 main()
 {
-	printf("begin program\n");
 	struct dic *d = new_dic(8, 0);
 	insert_raw(d, "a", 1, "a", 1);
 	insert_raw(d, "b", 1, "b", 1);
@@ -78,21 +77,31 @@ main()
 	insert_raw(d, "f", 1, "f", 1);
 	insert_raw(d, "g", 1, "g", 1);
 	insert_raw(d, "zebra", 5, "monsterman!", 11);
+	insert_raw(d, "z", 1, "zebra", 5);
 	print_dic(d);
-	struct py_obj *key = new_py_obj("zebra",5);
-	struct py_obj *value = get(d, key);
-	if (value->str == "monsterman!") {
-		printf("get() test passed\n");
+	struct py_obj *key1 = new_py_obj("zebra",5);
+	struct py_obj *value1 = get(d, key1);
+	struct py_obj *key2 = new_py_obj("z",1);
+	struct py_obj *value2 = get(d, key2);
+	if (value1 == NULL || value2 == NULL) {
+		printf("get() test failed, NULL value\n");
 	}
 	else {
-		printf("get() test failed\n");
+		if (value1->str == "monsterman!" && value2->str == "zebra") {
+			printf("get() test passed\n");
+		}
+		else {
+			printf("get() test failed\n");
+		}
 	}
 	struct py_obj *key_array = get_keys(d);
 	long i;
+	printf("keys: \t");
 	for (i = 0; i < d->used_slots; i++) {
 		print_array(key_array[i].str, key_array[i].len);
-		printf("\n");
+		printf("\t");
 	}
+	printf("\n");
 	return 0;
 }
 
@@ -157,7 +166,7 @@ void insert_raw(struct dic *d, char *k, int k_length, char *v, int v_length)
 // inserts dic_entry into table of dic
 void insert_entry(struct dic *d, struct dic_entry *entry_to_insert) {
 	//printf("insert_entry called\n");
-	long index = string_hash(entry_to_insert->key) & d->mask;
+	long index = string_hash(entry_to_insert->key);
 	insert_at_index(d, entry_to_insert, index, 0);
 	handle_resize(d);
 }
@@ -166,20 +175,25 @@ void insert_entry(struct dic *d, struct dic_entry *entry_to_insert) {
 // increments # of used_slots if appropriate
 void insert_at_index(struct dic *d, struct dic_entry *entry_to_insert, long index, long col_count)
 {
-	//printf("insert_at_index called\n");
+	index = index & d->mask;
 	if (d->table[index].key == NULL) {
+		// printf("insert fresh ");
+		// printf("at index %ld\n", index);
 		d->table[index] = *entry_to_insert;
 		d->used_slots++;
 	}
 	else if (d->table[index].key->str == entry_to_insert->key->str) {
+		//printf("insert overrite\n");
 		d->table[index] = *entry_to_insert;
 	}
 	else {
+		//printf("insert collision\n");
 		handle_collision(d, entry_to_insert, index, col_count + 1);
 	}
 }
 
 void handle_collision(struct dic *d, struct dic_entry *entry_to_insert, long index, long col_count) {
+	printf("collision\n");
 	insert_at_index(d, entry_to_insert, index + (col_count * col_count), col_count);
 }
 
